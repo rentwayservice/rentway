@@ -1,0 +1,11 @@
+{
+  "extends": "@rentway/typescript-config/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "strictNullChecks": true
+  },
+  "exclude": ["dist", "build", "node_modules"]
+}

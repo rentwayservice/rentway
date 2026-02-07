@@ -1,0 +1,31 @@
+{
+  "name": "@rentway/db",
+  "version": "0.0.0",
+  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "db:pull": "drizzle-kit pull",
+    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "npx drizzle-kit studio"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.40.1",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^25.1.0",
+    "@rentway/typescript-config": "workspace:*",
+    "drizzle-kit": "^0.31.4",
+    "typescript": "^5.9.3"
+  },
+  "exports": {
+    ".": "./src/drizzle/index.ts",
+    "./constants": "./src/constants/index.ts",
+    "./types": "./src/types/index.ts"
+  }
+}

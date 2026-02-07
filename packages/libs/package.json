@@ -1,0 +1,26 @@
+{
+  "name": "@rentway/libs",
+  "version": "1.0.0",
+  "description": "Shared utility libraries for the Rentway monorepo including error handling, performance utilities, and common helpers",
+  "type": "module",
+  "types": "index.ts",
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {},
+  "keywords": [
+    "utilities",
+    "error-handling",
+    "performance",
+    "shared"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@rentway/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@rentway/typescript-config": "workspace:*"
+  }
+}

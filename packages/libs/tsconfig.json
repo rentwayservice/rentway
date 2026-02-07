@@ -1,7 +1,9 @@
 {
   "extends": "@rentway/typescript-config/base.json",
   "compilerOptions": {
+    "outDir": "./dist",
     "strictNullChecks": true
-  }
+  },
+  "include": ["."],
+  "exclude": ["node_modules", "dist"]
 }
-
