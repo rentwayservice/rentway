@@ -11,6 +11,7 @@ import {
 import { Menu, User } from "lucide-react";
 import Link from "next/link";
 import { LanguageSwitcher } from "./language-switcher";
+import { ThemeSwitcher } from "./theme-switcher";
 
 const NAV_LINKS = [
   { href: "/explore", label: "Explore" },
@@ -45,6 +46,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeSwitcher />
           <LanguageSwitcher />
 
           <Button
