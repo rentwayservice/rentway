@@ -1,0 +1,581 @@
+---
+alwaysApply: false
+---
+# .curserrules - Next.js 15 App Router Project Rules
+
+## 🏗️ Project Architecture
+
+### Framework & Core
+
+- Use Next.js 15.1.5 with App Router architecture
+- JavaScript/JSX for all code files
+- React 19 with modern patterns (use hooks, functional components)
+- Tailwind CSS for styling with tailwind-merge and tailwindcss-animate
+
+### Component File Structure
+
+For complex components, split into organized files using kebab-case naming:
+
+```
+ComponentName/
+├── component-name.jsx        # Main component (default export)
+├── component-name.chunks.jsx # Sub-components and component parts
+├── component-name.server.js  # Server actions, API calls, data fetching
+├── component-name.lib.js     # Utility functions and business logic
+├── component-name.dto.js     # Data transfer objects and API schemas
+└── component-name.types.js   # JavaScript prop types and validation
+```
+
+**Naming Rules:**
+
+- All files use kebab-case
+- Always include appropriate suffix (.server, .lib, .dto, .types, .chunks)
+- Check existing utils/lib/hooks folders before creating new utilities
+
+## 📦 Dependencies & Imports
+
+### UI Components
+
+- Use @radix-ui components via shadcn/ui patterns
+- Import from '@/components/ui/' for shadcn components
+- Use lucide-react as primary icon library
+- Import specific icons: `import { IconName } from 'lucide-react'`
+
+### Forms & Validation
+
+- Use react-hook-form for all forms
+- Use @hookform/resolvers with zod for validation
+- Define schemas in .dto.ts files
+- Use zod for runtime validation and TypeScript inference
+
+### State Management
+
+- Use zustand for global state
+- Use @tanstack/react-query for server state
+- Prefer React's built-in state for component-local state
+
+### Date Handling
+
+- Use dayjs for all date operations
+- Import dayjs-plugin-utc when timezone handling needed
+- Use date-fns only when dayjs doesn't suffice
+
+### Styling
+
+- Use Tailwind CSS classes
+- Use clsx or cn() utility for conditional classes
+- Use class-variance-authority for component variants
+- Use tailwind-merge to handle class conflicts
+
+## 🎯 Coding Standards
+
+### TypeScript
+
+- Use strict TypeScript configuration
+- Define interfaces in .types.ts files
+- Use type imports: `import type { User } from './types'`
+- Prefer interfaces over types for object shapes
+- Use branded types for IDs and specific values
+
+### React Patterns
+
+- Use functional components with hooks
+- Prefer composition over inheritance
+- Use React.memo() for expensive components
+- Use useCallback and useMemo judiciously (only when needed)
+- Use proper dependency arrays in useEffect
+
+### Component Guidelines
+
+- Default export for main component
+- Named exports for utilities and types
+- Use forwardRef for components that need ref forwarding
+- Implement proper error boundaries where needed
+
+### Props & Interfaces
+
+- Use descriptive prop names
+- Make required props explicit
+- Use generic types for reusable components
+- Document complex props with JSDoc comments
+
+```typescript
+interface ComponentProps {
+  /** The user's full name */
+  userName: string
+  /** Optional callback when action completes */
+  onComplete?: () => void
+}
+```
+
+## 🌐 App Router Patterns
+
+### File Organization
+
+- Use app directory structure
+- Place global layouts in app/layout.tsx
+- Use route groups (parentheses) for organization
+- Implement loading.tsx, error.tsx, not-found.tsx where appropriate
+
+### Server Components vs Client Components
+
+- Default to Server Components
+- Use 'use client' directive only when necessary:
+  - Interactive features (onClick, onChange)
+  - Browser APIs (localStorage, window)
+  - State hooks (useState, useEffect)
+  - Context providers
+
+### Server Actions
+
+- Place server actions in .server.ts files
+- Use 'use server' directive
+- Implement proper error handling with try/catch
+- Return typed responses with success/error states
+
+## 🗄️ Data Management
+
+### Strapi Integration
+
+**Collection Types:** Activity, Announcement, BlogCategory, City, Classification, Club, Competition, Contact, Country, Coupon, cronLock, Currency, Customer, Deal, Expert, GameNewsLetter, Gift, Hotel, Inquiry, Job, JobApplication, jobCategory, Lang, Limited Coupon, Match, Match History, matchDateNotification, MatchNewsletter, Order, OrderPool, Page, Partner, Post, Purchased Ticket, QrLog, quoteComment, QuoteRequest, Stadium, stock, StockTicket, Supplier, TeamMember, Templates, Ticket Notification, Tour, Travel Pool, User, Warranty
+
+**Single Types:** BusinessVipPackages, Career, Faq, General, InquiryPage, Option, Team, Values
+
+- Create DTOs for all Strapi entities in .dto.ts files
+- Use consistent naming between Strapi and TypeScript interfaces
+- Implement proper error handling for API calls
+- Use React Query for caching and synchronization
+
+### API Patterns
+
+- Use consistent response shapes across all APIs
+- Implement proper loading and error states
+- Use optimistic updates where appropriate
+- Handle pagination consistently
+
+## 🎨 UI/UX Guidelines
+
+### Component Development
+
+- Build reusable components in components/ui/
+- Use compound component patterns for complex UI
+- Implement proper accessibility (ARIA labels, keyboard navigation)
+- Support both light and dark themes
+
+### Form Handling
+
+- Wrap all forms with react-hook-form
+- Validate with zod schemas
+- Show validation errors inline
+- Implement proper loading states during submission
+- Use react-hot-toast for user feedback
+
+### Responsive Design
+
+- Mobile-first approach with Tailwind
+- Use semantic breakpoints (sm, md, lg, xl, 2xl)
+- Test on multiple screen sizes
+- Ensure touch targets are appropriately sized
+
+## 📱 Performance & Optimization
+
+### Code Splitting
+
+- Use dynamic imports for heavy components
+- Implement route-based code splitting
+- Lazy load non-critical components
+
+### Image Optimization
+
+- Use Next.js Image component
+- Use sharp for image processing
+- Implement proper alt tags and loading states
+
+### Bundle Optimization
+
+- Import only what you need from libraries
+- Use tree-shaking friendly imports
+- Monitor bundle size with Next.js analyzer
+
+## 🔧 Development Workflow
+
+### Error Handling
+
+- Use error boundaries for component errors
+- Implement proper try/catch for async operations
+- Log errors to @sentry/nextjs
+- Provide meaningful error messages to users
+
+### Testing Considerations
+
+- Write testable components (pure functions when possible)
+- Separate business logic into .lib.ts files
+- Mock external dependencies properly
+- Test both happy path and error scenarios
+
+### Code Quality
+
+- Use ESLint and Prettier consistently
+- Follow conventional commit messages
+- Document complex business logic
+- Keep functions small and focused
+
+## 🚀 Deployment & Production
+
+### Environment Configuration
+
+- Use .env files for configuration
+- Never commit sensitive environment variables
+- Use next.config.js for Next.js specific configuration
+- Implement proper environment validation with zod
+
+### Performance Monitoring
+
+- Use @sentry/nextjs for error tracking
+- Monitor Core Web Vitals
+- Implement proper caching strategies
+- Use Next.js built-in analytics when available
+
+## 📋 Checklist for New Components
+
+Before creating any new component:
+
+- [ ] Check if similar utility exists in utils/lib/hooks folders
+- [ ] Determine if it should be a Server or Client Component
+- [ ] Plan the file structure (single file vs. multi-file)
+- [ ] Define TypeScript interfaces first
+- [ ] Consider reusability and composition
+- [ ] Implement proper error handling
+- [ ] Add loading states where appropriate
+- [ ] Ensure accessibility compliance
+- [ ] Test responsive behavior
+- [ ] Document complex logic
+
+## 🎯 Common Patterns
+
+### Data Fetching with React Query
+
+```typescript
+const { data, isLoading, error } = useQuery({
+  queryKey: ['matches', filters],
+  queryFn: () => fetchMatches(filters),
+  staleTime: 5 * 60 * 1000, // 5 minutes
+})
+```
+
+### Form with React Hook Form + Zod
+
+```javascript
+const form = useForm({
+  resolver: zodResolver(formSchema),
+  defaultValues: initialValues,
+})
+```
+
+### Server Action Integration
+
+```typescript
+const [pending, startTransition] = useTransition()
+
+const handleSubmit = (data: FormData) => {
+  startTransition(async () => {
+    const result = await createMatch(data)
+    if (result.success) {
+      toast.success('Match created successfully')
+    } else {
+      toast.error(result.error)
+    }
+  })
+}
+```
+
+Remember: Always prioritize code readability, maintainability, and performance. When in doubt, choose the simpler solution.
+# .curserrules - Next.js 15 App Router Project Rules
+
+## 🏗️ Project Architecture
+
+### Framework & Core
+
+- Use Next.js 15.1.5 with App Router architecture
+- JavaScript/JSX for all code files
+- React 19 with modern patterns (use hooks, functional components)
+- Tailwind CSS for styling with tailwind-merge and tailwindcss-animate
+
+### Component File Structure
+
+For complex components, split into organized files using kebab-case naming:
+
+```
+ComponentName/
+├── component-name.jsx        # Main component (default export)
+├── component-name.chunks.jsx # Sub-components and component parts
+├── component-name.server.js  # Server actions, API calls, data fetching
+├── component-name.lib.js     # Utility functions and business logic
+├── component-name.dto.js     # Data transfer objects and API schemas
+└── component-name.types.js   # JavaScript prop types and validation
+```
+
+**Naming Rules:**
+
+- All files use kebab-case
+- Always include appropriate suffix (.server, .lib, .dto, .types, .chunks)
+- Check existing utils/lib/hooks folders before creating new utilities
+
+## 📦 Dependencies & Imports
+
+### UI Components
+
+- Use @radix-ui components via shadcn/ui patterns
+- Import from '@/components/ui/' for shadcn components
+- Use lucide-react as primary icon library
+- Import specific icons: `import { IconName } from 'lucide-react'`
+
+### Forms & Validation
+
+- Use react-hook-form for all forms
+- Use @hookform/resolvers with zod for validation
+- Define schemas in .dto.ts files
+- Use zod for runtime validation and TypeScript inference
+
+### State Management
+
+- Use zustand for global state
+- Use @tanstack/react-query for server state
+- Prefer React's built-in state for component-local state
+
+### Date Handling
+
+- Use dayjs for all date operations
+- Import dayjs-plugin-utc when timezone handling needed
+- Use date-fns only when dayjs doesn't suffice
+
+### Styling
+
+- Use Tailwind CSS classes
+- Use clsx or cn() utility for conditional classes
+- Use class-variance-authority for component variants
+- Use tailwind-merge to handle class conflicts
+
+## 🎯 Coding Standards
+
+### TypeScript
+
+- Use strict TypeScript configuration
+- Define interfaces in .types.ts files
+- Use type imports: `import type { User } from './types'`
+- Prefer interfaces over types for object shapes
+- Use branded types for IDs and specific values
+
+### React Patterns
+
+- Use functional components with hooks
+- Prefer composition over inheritance
+- Use React.memo() for expensive components
+- Use useCallback and useMemo judiciously (only when needed)
+- Use proper dependency arrays in useEffect
+
+### Component Guidelines
+
+- Default export for main component
+- Named exports for utilities and types
+- Use forwardRef for components that need ref forwarding
+- Implement proper error boundaries where needed
+
+### Props & Interfaces
+
+- Use descriptive prop names
+- Make required props explicit
+- Use generic types for reusable components
+- Document complex props with JSDoc comments
+
+```typescript
+interface ComponentProps {
+  /** The user's full name */
+  userName: string
+  /** Optional callback when action completes */
+  onComplete?: () => void
+}
+```
+
+## 🌐 App Router Patterns
+
+### File Organization
+
+- Use app directory structure
+- Place global layouts in app/layout.tsx
+- Use route groups (parentheses) for organization
+- Implement loading.tsx, error.tsx, not-found.tsx where appropriate
+
+### Server Components vs Client Components
+
+- Default to Server Components
+- Use 'use client' directive only when necessary:
+  - Interactive features (onClick, onChange)
+  - Browser APIs (localStorage, window)
+  - State hooks (useState, useEffect)
+  - Context providers
+
+### Server Actions
+
+- Place server actions in .server.ts files
+- Use 'use server' directive
+- Implement proper error handling with try/catch
+- Return typed responses with success/error states
+
+## 🗄️ Data Management
+
+### Strapi Integration
+
+**Collection Types:** Activity, Announcement, BlogCategory, City, Classification, Club, Competition, Contact, Country, Coupon, cronLock, Currency, Customer, Deal, Expert, GameNewsLetter, Gift, Hotel, Inquiry, Job, JobApplication, jobCategory, Lang, Limited Coupon, Match, Match History, matchDateNotification, MatchNewsletter, Order, OrderPool, Page, Partner, Post, Purchased Ticket, QrLog, quoteComment, QuoteRequest, Stadium, stock, StockTicket, Supplier, TeamMember, Templates, Ticket Notification, Tour, Travel Pool, User, Warranty
+
+**Single Types:** BusinessVipPackages, Career, Faq, General, InquiryPage, Option, Team, Values
+
+- Create DTOs for all Strapi entities in .dto.ts files
+- Use consistent naming between Strapi and TypeScript interfaces
+- Implement proper error handling for API calls
+- Use React Query for caching and synchronization
+
+### API Patterns
+
+- Use consistent response shapes across all APIs
+- Implement proper loading and error states
+- Use optimistic updates where appropriate
+- Handle pagination consistently
+
+## 🎨 UI/UX Guidelines
+
+### Component Development
+
+- Build reusable components in components/ui/
+- Use compound component patterns for complex UI
+- Implement proper accessibility (ARIA labels, keyboard navigation)
+- Support both light and dark themes
+
+### Form Handling
+
+- Wrap all forms with react-hook-form
+- Validate with zod schemas
+- Show validation errors inline
+- Implement proper loading states during submission
+- Use react-hot-toast for user feedback
+
+### Responsive Design
+
+- Mobile-first approach with Tailwind
+- Use semantic breakpoints (sm, md, lg, xl, 2xl)
+- Test on multiple screen sizes
+- Ensure touch targets are appropriately sized
+
+## 📱 Performance & Optimization
+
+### Code Splitting
+
+- Use dynamic imports for heavy components
+- Implement route-based code splitting
+- Lazy load non-critical components
+
+### Image Optimization
+
+- Use Next.js Image component
+- Use sharp for image processing
+- Implement proper alt tags and loading states
+
+### Bundle Optimization
+
+- Import only what you need from libraries
+- Use tree-shaking friendly imports
+- Monitor bundle size with Next.js analyzer
+
+## 🔧 Development Workflow
+
+### Error Handling
+
+- Use error boundaries for component errors
+- Implement proper try/catch for async operations
+- Log errors to @sentry/nextjs
+- Provide meaningful error messages to users
+
+### Testing Considerations
+
+- Write testable components (pure functions when possible)
+- Separate business logic into .lib.ts files
+- Mock external dependencies properly
+- Test both happy path and error scenarios
+
+### Code Quality
+
+- Use ESLint and Prettier consistently
+- Follow conventional commit messages
+- Document complex business logic
+- Keep functions small and focused
+
+## 🚀 Deployment & Production
+
+### Environment Configuration
+
+- Use .env files for configuration
+- Never commit sensitive environment variables
+- Use next.config.js for Next.js specific configuration
+- Implement proper environment validation with zod
+
+### Performance Monitoring
+
+- Use @sentry/nextjs for error tracking
+- Monitor Core Web Vitals
+- Implement proper caching strategies
+- Use Next.js built-in analytics when available
+
+## 📋 Checklist for New Components
+
+Before creating any new component:
+
+- [ ] Check if similar utility exists in utils/lib/hooks folders
+- [ ] Determine if it should be a Server or Client Component
+- [ ] Plan the file structure (single file vs. multi-file)
+- [ ] Define TypeScript interfaces first
+- [ ] Consider reusability and composition
+- [ ] Implement proper error handling
+- [ ] Add loading states where appropriate
+- [ ] Ensure accessibility compliance
+- [ ] Test responsive behavior
+- [ ] Document complex logic
+
+## 🎯 Common Patterns
+
+### Data Fetching with React Query
+
+```typescript
+const { data, isLoading, error } = useQuery({
+  queryKey: ['matches', filters],
+  queryFn: () => fetchMatches(filters),
+  staleTime: 5 * 60 * 1000, // 5 minutes
+})
+```
+
+### Form with React Hook Form + Zod
+
+```javascript
+const form = useForm({
+  resolver: zodResolver(formSchema),
+  defaultValues: initialValues,
+})
+```
+
+### Server Action Integration
+
+```typescript
+const [pending, startTransition] = useTransition()
+
+const handleSubmit = (data: FormData) => {
+  startTransition(async () => {
+    const result = await createMatch(data)
+    if (result.success) {
+      toast.success('Match created successfully')
+    } else {
+      toast.error(result.error)
+    }
+  })
+}
+```
+
+Remember: Always prioritize code readability, maintainability, and performance. When in doubt, choose the simpler solution.
