@@ -7,6 +7,18 @@ export function formatPrice(amount: number, locale: string): string {
   return locale === "ar" ? `${formattedAmount} ج.م` : `£${formattedAmount}`;
 }
 
+/**
+ * Formats a price with explicit currency code (e.g. EGP, AED).
+ */
+export function formatPriceWithCurrency(
+  amount: number,
+  currency: string,
+  locale: string
+): string {
+  const formattedAmount = new Intl.NumberFormat(locale).format(amount);
+  return `${currency} ${formattedAmount}`;
+}
+
 export type PricePeriod = "day" | "week" | "month";
 
 const PERIOD_LABELS: Record<string, Record<PricePeriod, string>> = {

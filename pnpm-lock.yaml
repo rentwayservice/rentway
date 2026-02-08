@@ -26,6 +26,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@rentway/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@rentway/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -35,6 +38,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.95.3
         version: 2.95.3
+      drizzle-orm:
+        specifier: ^0.40.1
+        version: 0.40.1(postgres@3.4.8)
       lucide-react:
         specifier: ^0.563.0
         version: 0.563.0(react@19.2.4)

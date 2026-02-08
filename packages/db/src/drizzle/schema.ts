@@ -357,6 +357,7 @@ export const cars = pgTable(
   "cars",
   {
     id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+    slug: text("slug").notNull(),
     providerId: uuid("provider_id").notNull(),
     modelId: uuid("model_id").notNull(),
     createdAt: timestamp("created_at", {

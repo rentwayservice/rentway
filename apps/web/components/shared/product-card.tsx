@@ -7,13 +7,14 @@ import type { CarListing } from "@/components/home/home.constants";
 import { formatPrice, formatPriceWithPeriod } from "@/lib/format-price";
 
 interface ProductCardProps {
-  car: CarListing;
+  car: CarListing & { slug?: string };
   locale: string;
 }
 
 export function ProductCard({ car, locale }: ProductCardProps) {
+  const href = car.slug ? `/cars/${car.slug}` : `/cars/${car.id}`;
   return (
-    <Link href={`/cars/${car.id}`}>
+    <Link href={href}>
       <Card className="group gap-2.5 overflow-hidden rounded-none pt-0 ring-0">
         <div className="relative aspect-4/3 w-full overflow-hidden rounded-xl">
           <Image
