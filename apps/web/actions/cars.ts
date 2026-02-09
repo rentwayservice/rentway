@@ -1,341 +1,227 @@
 "use server";
 
-import dayjs from "dayjs";
+import { cars, db } from "@rentway/db";
+import { sql } from "drizzle-orm";
 import {
-  brands,
-  bodyTypes,
-  carFeatures,
-  cars,
-  db,
-  featureCategories,
-  features,
-  models,
-  providers,
-} from "@rentway/db";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { z } from "zod";
-import type { InferSelectModel } from "drizzle-orm";
-import type { ActionResult } from "@/actions/action-result";
+  and,
+  desc,
+  eq,
+  type InferInsertModel,
+  type InferSelectModel,
+  type SQL,
+} from "drizzle-orm";
+import { revalidateTag, unstable_cache } from "next/cache";
 
-const listCarsSchema = z.object({
-  providerId: z.string().uuid().optional(),
-  brandId: z.string().uuid().optional(),
-  bodyTypeId: z.string().uuid().optional(),
-  fuelType: z
-    .enum(["petrol", "diesel", "electric", "hybrid", "plug_in_hybrid"])
-    .optional(),
-  transmissionType: z
-    .enum(["automatic", "manual", "cvt", "semi_automatic"])
-    .optional(),
-  minPrice: z.number().optional(),
-  maxPrice: z.number().optional(),
-  availableFrom: z.string().optional(),
-  availableUntil: z.string().optional(),
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-});
-
-const carSlugSchema = z.object({ slug: z.string().min(1) });
-const carFeaturesSchema = z.object({ carId: z.string().uuid() });
-
-const createCarSchema = z.object({
-  providerId: z.string().uuid(),
-  modelId: z.string().uuid(),
-  slug: z.string().min(1),
-  year: z.number(),
-  dailyRate: z.number().optional(),
-  weeklyRate: z.number().optional(),
-  monthlyRate: z.number().optional(),
-  availability: z
-    .enum(["available", "rented", "reserved", "maintenance"])
-    .optional(),
-  status: z.enum(["active", "inactive", "deleted"]).optional(),
-  description: z.string().optional(),
-});
-
-const updateCarSchema = z.object({
-  id: z.string().uuid(),
-  slug: z.string().min(1).optional(),
-  year: z.number().optional(),
-  dailyRate: z.number().optional(),
-  weeklyRate: z.number().optional(),
-  monthlyRate: z.number().optional(),
-  availability: z
-    .enum(["available", "rented", "reserved", "maintenance"])
-    .optional(),
-  status: z.enum(["active", "inactive", "deleted"]).optional(),
-  description: z.string().optional(),
-});
-
-const setCarFeaturesSchema = z.object({
-  carId: z.string().uuid(),
-  featureIds: z.array(z.string().uuid()),
-});
-
-
+// Types inferred from schema
 export type Car = InferSelectModel<typeof cars>;
-export type Model = InferSelectModel<typeof models>;
-export type Brand = InferSelectModel<typeof brands>;
-export type Provider = InferSelectModel<typeof providers>;
-export type BodyType = InferSelectModel<typeof bodyTypes>;
-export type Feature = InferSelectModel<typeof features>;
-export type FeatureCategory = InferSelectModel<typeof featureCategories>;
+export type CarInsert = InferInsertModel<typeof cars>;
 
-export type CarWithDetails = {
-  car: Car;
-  model: Model;
-  brand: Brand;
-  provider: Provider;
-  bodyType: BodyType | null;
-};
+// Filter options for list queries
+export interface CarsFilter {
+  providerId?: string;
+  modelId?: string;
+  status?: "active" | "inactive" | "deleted";
+  approvalStatus?: "pending" | "approved" | "rejected";
+  availability?: "available" | "rented" | "reserved" | "maintenance";
+  limit?: number;
+  offset?: number;
+}
 
-export type CarDetail = CarWithDetails & {
-  features: Array<{
-    feature: Feature;
-    category: FeatureCategory | null;
-  }>;
-};
+const CARS_TAG = "cars";
 
-const DEFAULT_LIMIT = 12;
-
-const formatDate = (value?: string) => {
-  if (!value) return null;
-  const parsed = dayjs(value);
-  if (!parsed.isValid()) return null;
-  return parsed.format("YYYY-MM-DD");
-};
-
-export const listCars = async (
-  rawFilters: z.input<typeof listCarsSchema> = {}
-): Promise<
-  ActionResult<{ items: CarWithDetails[]; total: number }>
-> => {
-  const parsed = listCarsSchema.safeParse(rawFilters);
-  if (!parsed.success) {
-    return { success: false, error: "Invalid filters." };
+// Internal fetch functions for unstable_cache (must be pure, no closure over db)
+async function fetchCars(filter: CarsFilter) {
+  const conditions: SQL[] = [];
+  if (filter.providerId) {
+    conditions.push(eq(cars.providerId, filter.providerId));
+  }
+  if (filter.modelId) {
+    conditions.push(eq(cars.modelId, filter.modelId));
+  }
+  if (filter.status) {
+    conditions.push(eq(cars.status, filter.status));
+  }
+  if (filter.approvalStatus) {
+    conditions.push(eq(cars.approvalStatus, filter.approvalStatus));
+  }
+  if (filter.availability) {
+    conditions.push(eq(cars.availability, filter.availability));
   }
 
-  try {
-    const filters = parsed.data;
-    const conditions = [
-      eq(cars.approvalStatus, "approved"),
-      eq(cars.status, "active"),
-      eq(cars.availability, "available"),
-    ];
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    if (filters.providerId) {
-      conditions.push(eq(cars.providerId, filters.providerId));
-    }
-    if (filters.brandId) {
-      conditions.push(eq(models.brandId, filters.brandId));
-    }
-    if (filters.bodyTypeId) {
-      conditions.push(eq(models.bodyTypeId, filters.bodyTypeId));
-    }
-    if (filters.fuelType) {
-      conditions.push(eq(models.fuelType, filters.fuelType));
-    }
-    if (filters.transmissionType) {
-      conditions.push(eq(models.transmissionType, filters.transmissionType));
-    }
-    if (filters.minPrice !== undefined) {
-      conditions.push(gte(cars.dailyRate, filters.minPrice));
-    }
-    if (filters.maxPrice !== undefined) {
-      conditions.push(lte(cars.dailyRate, filters.maxPrice));
-    }
+  const limit = filter.limit ?? 50;
+  const offset = filter.offset ?? 0;
 
-    const availableFrom = formatDate(filters.availableFrom);
-    const availableUntil = formatDate(filters.availableUntil);
+  const result = await db
+    .select()
+    .from(cars)
+    .where(whereClause)
+    .orderBy(desc(cars.createdAt))
+    .limit(limit)
+    .offset(offset);
 
-    if (availableFrom) {
-      conditions.push(lte(cars.availableFrom, availableFrom));
-    }
-    if (availableUntil) {
-      conditions.push(gte(cars.availableUntil, availableUntil));
-    }
+  return result;
+}
 
-    const limit = filters.limit ?? DEFAULT_LIMIT;
-    const offset = filters.offset ?? 0;
+async function fetchCarById(id: string) {
+  const result = await db.select().from(cars).where(eq(cars.id, id)).limit(1);
+  return result[0] ?? null;
+}
 
-    const items = await db
-      .select({
-        car: cars,
-        model: models,
-        brand: brands,
-        provider: providers,
-        bodyType: bodyTypes,
-      })
-      .from(cars)
-      .innerJoin(models, eq(cars.modelId, models.id))
-      .innerJoin(brands, eq(models.brandId, brands.id))
-      .innerJoin(providers, eq(cars.providerId, providers.id))
-      .leftJoin(bodyTypes, eq(models.bodyTypeId, bodyTypes.id))
-      .where(and(...conditions))
-      .orderBy(desc(cars.createdAt))
-      .limit(limit)
-      .offset(offset);
+async function fetchCarBySlug(slug: string) {
+  const result = await db
+    .select()
+    .from(cars)
+    .where(eq(cars.slug, slug))
+    .limit(1);
+  return result[0] ?? null;
+}
 
-    const totalQuery = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(cars)
-      .innerJoin(models, eq(cars.modelId, models.id))
-      .innerJoin(brands, eq(models.brandId, brands.id))
-      .innerJoin(providers, eq(cars.providerId, providers.id))
-      .leftJoin(bodyTypes, eq(models.bodyTypeId, bodyTypes.id))
-      .where(and(...conditions));
+async function fetchCarsWithDetails(filter: CarsFilter) {
+  const conditions: SQL[] = [];
+  if (filter.providerId) {
+    conditions.push(eq(cars.providerId, filter.providerId));
+  }
+  if (filter.modelId) {
+    conditions.push(eq(cars.modelId, filter.modelId));
+  }
+  if (filter.status) {
+    conditions.push(eq(cars.status, filter.status));
+  }
+  if (filter.approvalStatus) {
+    conditions.push(eq(cars.approvalStatus, filter.approvalStatus));
+  }
+  if (filter.availability) {
+    conditions.push(eq(cars.availability, filter.availability));
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const limit = filter.limit ?? 12;
+  const offset = filter.offset ?? 0;
 
-    return {
-      success: true,
-      data: {
-        items,
-        total: totalQuery[0]?.count ?? 0,
+  const result = await db.query.cars.findMany({
+    where: whereClause,
+    limit,
+    offset,
+    orderBy: [desc(cars.createdAt)],
+    with: {
+      model: {
+        with: { brand: true },
       },
-    };
-  } catch (error) {
-    return { success: false, error: "Unable to list cars." };
-  }
-};
+    },
+  });
+  return result;
+}
 
-export const getCarBySlug = async (
-  raw: z.input<typeof carSlugSchema>
-): Promise<ActionResult<CarDetail | null>> => {
-  const parsed = carSlugSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { success: false, error: "Invalid car slug." };
+async function fetchCarsCount(filter: Omit<CarsFilter, "limit" | "offset">) {
+  const conditions: SQL[] = [];
+  if (filter.providerId) {
+    conditions.push(eq(cars.providerId, filter.providerId));
   }
+  if (filter.modelId) {
+    conditions.push(eq(cars.modelId, filter.modelId));
+  }
+  if (filter.status) {
+    conditions.push(eq(cars.status, filter.status));
+  }
+  if (filter.approvalStatus) {
+    conditions.push(eq(cars.approvalStatus, filter.approvalStatus));
+  }
+  if (filter.availability) {
+    conditions.push(eq(cars.availability, filter.availability));
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  try {
-    const car = await db.query.cars.findFirst({
-      where: eq(cars.slug, parsed.data.slug),
-      with: {
-        model: { with: { brand: true, bodyType: true } },
-        provider: true,
-        carFeatures: {
-          with: {
-            feature: { with: { category: true } },
-          },
+  const query = db.select({ count: sql<number>`count(*)::int` }).from(cars);
+  const result = whereClause
+    ? await query.where(whereClause)
+    : await query;
+  return result[0]?.count ?? 0;
+}
+
+async function fetchCarBySlugWithDetails(slug: string) {
+  const result = await db.query.cars.findFirst({
+    where: eq(cars.slug, slug),
+    with: {
+      model: {
+        with: {
+          brand: true,
         },
       },
-    });
+      carFeatures: {
+        with: {
+          feature: true,
+        },
+      },
+    },
+  });
+  return result ?? null;
+}
+// Cached read operations
+export const getCarsWithDetails = async (filter: CarsFilter = {}) =>
+  unstable_cache(
+    () => fetchCarsWithDetails(filter),
+    [`cars-list-details-${JSON.stringify(filter)}`],
+    { tags: [CARS_TAG], revalidate: 60 }
+  )();
 
-    if (!car) {
-      return { success: true, data: null };
+export const getCarsCount = async (
+  filter: Omit<CarsFilter, "limit" | "offset"> = {}
+) =>
+  unstable_cache(
+    () => fetchCarsCount(filter),
+    [`cars-count-${JSON.stringify(filter)}`],
+    { tags: [CARS_TAG], revalidate: 60 }
+  )();
+
+export const getCars = async (filter: CarsFilter = {}) =>
+  unstable_cache(
+    () => fetchCars(filter),
+    [`cars-list-${JSON.stringify(filter)}`],
+    { tags: [CARS_TAG], revalidate: 60 }
+  )();
+
+export const getCar = async (id: string) =>
+  unstable_cache(() => fetchCarById(id), [`car-${id}`], {
+    tags: [CARS_TAG],
+    revalidate: 60,
+  })();
+
+export const getCarBySlug = async (slug: string) =>
+  unstable_cache(() => fetchCarBySlug(slug), [`car-slug-${slug}`], {
+    tags: [CARS_TAG],
+    revalidate: 60,
+  })();
+
+export const getCarBySlugWithDetails = async (slug: string) =>
+  unstable_cache(
+    () => fetchCarBySlugWithDetails(slug),
+    [`car-slug-details-${slug}`],
+    {
+      tags: [CARS_TAG],
+      revalidate: 60,
     }
+  )();
 
-    return {
-      success: true,
-      data: {
-        car,
-        model: car.model,
-        brand: car.model.brand,
-        provider: car.provider,
-        bodyType: car.model.bodyType ?? null,
-        features: car.carFeatures.map((item) => ({
-          feature: item.feature,
-          category: item.feature.category ?? null,
-        })),
-      },
-    };
-  } catch (error) {
-    return { success: false, error: "Unable to load car." };
-  }
+// Mutations (revalidate cache after changes)
+export const createCar = async (data: CarInsert) => {
+  const result = await db.insert(cars).values(data).returning();
+  revalidateTag(CARS_TAG, "max");
+  return result[0];
 };
 
-export const getCarFeatures = async (
-  raw: z.input<typeof carFeaturesSchema>
-): Promise<ActionResult<Feature[]>> => {
-  const parsed = carFeaturesSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { success: false, error: "Invalid car id." };
-  }
-
-  try {
-    const items = await db.query.carFeatures.findMany({
-      where: eq(carFeatures.carId, parsed.data.carId),
-      with: {
-        feature: { with: { category: true } },
-      },
-    });
-
-    return { success: true, data: items.map((item) => item.feature) };
-  } catch (error) {
-    return { success: false, error: "Unable to load car features." };
-  }
+export const updateCar = async (id: string, data: Partial<CarInsert>) => {
+  const result = await db
+    .update(cars)
+    .set({ ...data, updatedAt: new Date().toISOString() })
+    .where(eq(cars.id, id))
+    .returning();
+  revalidateTag(CARS_TAG, "max");
+  return result[0];
 };
 
-export const createCar = async (
-  raw: z.input<typeof createCarSchema>
-): Promise<ActionResult<Car>> => {
-  const parsed = createCarSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { success: false, error: "Invalid car payload." };
-  }
-
-  try {
-    const [created] = await db
-      .insert(cars)
-      .values({
-        ...parsed.data,
-        approvalStatus: "pending",
-      })
-      .returning();
-    return { success: true, data: created };
-  } catch (error) {
-    return { success: false, error: "Unable to create car." };
-  }
-};
-
-export const updateCar = async (
-  raw: z.input<typeof updateCarSchema>
-): Promise<ActionResult<Car>> => {
-  const parsed = updateCarSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { success: false, error: "Invalid car payload." };
-  }
-
-  try {
-    const [updated] = await db
-      .update(cars)
-      .set({ ...parsed.data, updatedAt: new Date().toISOString() })
-      .where(eq(cars.id, parsed.data.id))
-      .returning();
-    return { success: true, data: updated };
-  } catch (error) {
-    return { success: false, error: "Unable to update car." };
-  }
-};
-
-export const setCarFeatures = async (
-  raw: z.input<typeof setCarFeaturesSchema>
-): Promise<ActionResult<{ carId: string; featureIds: string[] }>> => {
-  const parsed = setCarFeaturesSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { success: false, error: "Invalid features payload." };
-  }
-
-  try {
-    await db
-      .delete(carFeatures)
-      .where(eq(carFeatures.carId, parsed.data.carId));
-
-    if (parsed.data.featureIds.length > 0) {
-      await db.insert(carFeatures).values(
-        parsed.data.featureIds.map((featureId) => ({
-          carId: parsed.data.carId,
-          featureId,
-        }))
-      );
-    }
-
-    return {
-      success: true,
-      data: {
-        carId: parsed.data.carId,
-        featureIds: parsed.data.featureIds,
-      },
-    };
-  } catch (error) {
-    return { success: false, error: "Unable to update car features." };
-  }
+export const deleteCar = async (id: string) => {
+  const result = await db.delete(cars).where(eq(cars.id, id)).returning();
+  revalidateTag(CARS_TAG, "max");
+  return result[0];
 };

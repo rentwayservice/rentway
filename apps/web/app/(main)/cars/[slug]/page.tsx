@@ -1,67 +1,54 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCarBySlug } from "@/actions/cars";
-import { CarDetails } from "@/components/car-details/car-details";
-import { CarFeaturePicker } from "@/components/car-feature-picker/car-feature-picker";
-import { ProviderCard } from "@/components/provider-card/provider-card";
+import { getLocale } from "next-intl/server";
+import { getCarBySlugWithDetails } from "@/actions/cars";
+import {
+  CarConditions,
+  CarDescription,
+  CarFeatures,
+  CarHero,
+  CarIncludedBenefits,
+  CarMileage,
+  CarPricingTiers,
+  CarSpecifications,
+} from "@/components/car";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
-  const result = await getCarBySlug({ slug: params.slug });
-  if (!result.success || !result.data) {
-    return { title: "Car" };
-  }
-
-  const car = result.data;
-  const title = `${car.brand.name} ${car.model.name}`;
-  const description = car.car.description ?? "Explore this rental car.";
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      images: car.car.primaryImageUrl ? [car.car.primaryImageUrl] : [],
-    },
-    alternates: {
-      canonical: `/cars/${car.car.slug}`,
-    },
-  };
+interface CarPageProps {
+  params: Promise<{ slug: string }>;
 }
 
-export default async function CarDetailPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const result = await getCarBySlug({ slug: params.slug });
+export default async function CarPage({ params }: CarPageProps) {
+  const { slug } = await params;
+  const car = await getCarBySlugWithDetails(slug);
+  const locale = await getLocale();
 
-  if (!result.success || !result.data) {
+  if (!car) {
     notFound();
   }
 
-  const car = result.data;
+  const carName = car.model?.brand
+    ? `${car.model.brand.name} ${car.model.name}`
+    : (car.model?.name ?? "Car");
 
   return (
-    <main className="space-y-8 pb-16">
-      <CarDetails car={car} />
-      <CarFeaturePicker features={car.features.map((item) => item.feature)} />
-      <ProviderCard
-        name={car.provider.name}
-        description={car.provider.description}
-        href={`/providers/${car.provider.slug}`}
-        logoUrl={
-          typeof car.provider.branding === "object" &&
-          car.provider.branding !== null
-            ? (car.provider.branding as { logo_url?: string | null }).logo_url ??
-              null
-            : null
-        }
-      />
+    <main className="min-h-screen">
+      <CarHero car={car} locale={locale} />
+      <div className="container mx-auto space-y-6 px-4 pb-12">
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <CarSpecifications car={car} />
+            <CarFeatures carFeatures={car.carFeatures} />
+            <CarDescription car={car} carName={carName} />
+            <CarConditions car={car} />
+            <CarMileage car={car} />
+            <CarIncludedBenefits />
+          </div>
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 space-y-6">
+              <CarPricingTiers car={car} locale={locale} />
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
