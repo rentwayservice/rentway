@@ -4,6 +4,7 @@ import "@rentway/ui/globals.css";
 import { DirectionProvider } from "@rentway/ui/components/direction";
 import { getLocale } from "next-intl/server";
 import { Providers } from "@/components/providers";
+import type { Metadata } from "next";
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -14,6 +15,31 @@ const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 });
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://rentway.app"),
+  title: {
+    default: "Rentway",
+    template: "%s | Rentway",
+  },
+  description:
+    "Rent cars from trusted providers with transparent pricing and availability.",
+  openGraph: {
+    type: "website",
+    siteName: "Rentway",
+    title: "Rentway",
+    description:
+      "Rent cars from trusted providers with transparent pricing and availability.",
+    images: [
+      {
+        url: "/og-default.png",
+        width: 1200,
+        height: 630,
+        alt: "Rentway",
+      },
+    ],
+  },
+};
 
 export default async function RootLayout({
   children,
