@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import "@rentway/ui/globals.css";
 import { DirectionProvider } from "@rentway/ui/components/direction";
+import { Toaster } from "@rentway/ui/components/sonner";
 import { getLocale } from "next-intl/server";
 import { Providers } from "@/components/providers";
 
@@ -32,6 +33,7 @@ export default async function RootLayout({
           <NextIntlClientProvider>
             <DirectionProvider direction={direction}>
               {children}
+              <Toaster />
             </DirectionProvider>
           </NextIntlClientProvider>
         </Providers>

@@ -30,11 +30,11 @@ const PERIOD_LABELS: Record<string, Record<PricePeriod, string>> = {
  * Formats a price with period (e.g. EGP200/day or 200 ج.م/يوم).
  */
 export function formatPriceWithPeriod(
-  amount: number,
+  amount: string,
   period: PricePeriod,
   locale: string
 ): string {
-  const price = formatPrice(amount, locale);
+  const price = formatPrice(Number(amount), locale);
   const label =
     PERIOD_LABELS[locale]?.[period] ?? PERIOD_LABELS.en?.[period] ?? period;
   return `${price}/${label}`;

@@ -1,14 +1,34 @@
+"use client";
 import { Badge } from "@rentway/ui/components/badge";
 import { Button } from "@rentway/ui/components/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@rentway/ui/components/card";
-import { CalendarDays, Car, Check, Fuel, Gauge, Shirt } from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@rentway/ui/components/carousel";
+import { Dialog, DialogContent } from "@rentway/ui/components/dialog";
+import { cn } from "@rentway/ui/lib/utils";
+import {
+  CalendarDays,
+  Car,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Fuel,
+  Gauge,
+  Shirt,
+  X,
+} from "lucide-react";
 import Image from "next/image";
+import React from "react";
 import { formatPriceWithCurrency } from "@/lib/format-price";
 import {
   CAR_PAGE_LABELS,
@@ -23,72 +43,299 @@ interface CarHeroProps {
   locale: string;
 }
 
-export function CarHero({ car, locale }: CarHeroProps) {
-  const carName = car.model?.brand
-    ? `${car.model.brand.name} ${car.model.name}`
-    : (car.model?.name ?? "Car");
-  const title = `Rent ${carName} ${car.year}`;
-  const imageUrl =
-    car.primaryImageUrl ??
-    (Array.isArray(car.images) && car.images.length > 0
-      ? String((car.images as string[])[0])
-      : "/audi.jpeg");
+interface GalleryProps {
+  images: string[];
+  className?: string;
+}
 
-  const dailyRate = car.dailyRate ? Number(car.dailyRate) : 0;
-  const currency = car.currency ?? "EGP";
+export function GalleryGrid({
+  images,
+  onOpen,
+}: {
+  images: string[];
+  onOpen: (index: number) => void;
+}) {
+  const first = images[0];
+  const rest = images.slice(1, 5); // show 4 thumbs like screenshot
+  const remaining = Math.max(0, images.length - 5);
 
   return (
-    <section className="container mx-auto px-4 py-6 md:py-8">
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
-            <Image
-              alt={title}
-              className="object-cover"
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 66vw"
-              src={imageUrl}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge className="gap-1" variant="secondary">
-              <Check className="size-3" />
-              {CAR_PAGE_LABELS.noDeposit}
-            </Badge>
-            <Badge className="gap-1" variant="secondary">
-              <Check className="size-3" />
-              {CAR_PAGE_LABELS.freeDelivery}
-            </Badge>
-            <Badge className="gap-1" variant="secondary">
-              <Check className="size-3" />
-              {CAR_PAGE_LABELS.minDays}
-            </Badge>
-          </div>
+    <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-7">
+      {/* Big primary */}
+      <button
+        className="group relative overflow-hidden rounded-l-xl border bg-muted lg:col-span-4"
+        onClick={() => onOpen(0)}
+        type="button"
+      >
+        <div className="relative aspect-16/12 w-full">
+          <Image
+            alt="Car photo 1"
+            className="h-full w-full object-cover"
+            fill
+            priority
+            sizes="(min-width: 1024px) 60vw, 100vw"
+            src={first ?? ""}
+          />
         </div>
+      </button>
 
-        <div className="space-y-4">
-          <div>
-            <h1 className="font-bold text-2xl md:text-3xl">{title}</h1>
-          </div>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>
-                From {formatPriceWithCurrency(dailyRate, currency, locale)}
-              </CardDescription>
-              <CardTitle className="font-bold text-2xl">
-                {formatPriceWithCurrency(dailyRate, currency, locale)}{" "}
-                <span className="font-normal text-base text-muted-foreground">
-                  {CAR_PAGE_LABELS.perDay}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button className="w-full" size="lg">
-                {CAR_PAGE_LABELS.bookNow}
-              </Button>
-            </CardContent>
-          </Card>
+      {/* Right grid */}
+      <div className="grid grid-cols-2 gap-1.5 overflow-hidden rounded-r-xl lg:col-span-3">
+        {rest.map((src, i) => {
+          const idx = i + 1;
+          const isLastThumb = i === rest.length - 1;
+
+          return (
+            <button
+              className="relative h-full w-full border"
+              key={`${src}-${idx}`}
+              onClick={() => onOpen(idx)}
+              type="button"
+            >
+              <Image
+                alt={`Car photo ${idx + 1}`}
+                className="h-full w-full object-cover"
+                fill
+                sizes="(min-width: 1024px) 20vw, 50vw"
+                src={src}
+              />
+
+              {remaining > 0 && isLastThumb && (
+                <div className="absolute inset-0 flex items-end justify-end p-3">
+                  <div className="rounded-full bg-black/70 px-3 py-1 font-medium text-sm text-white">
+                    +{remaining} more
+                  </div>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function FullscreenCarousel({
+  images,
+  index,
+  onIndexChange,
+  onClose,
+}: {
+  images: string[];
+  index: number;
+  onIndexChange: (next: number) => void;
+  onClose: () => void;
+}) {
+  const total = images.length;
+
+  const prev = React.useCallback(() => {
+    onIndexChange((index - 1 + total) % total);
+  }, [index, total, onIndexChange]);
+
+  const next = React.useCallback(() => {
+    onIndexChange((index + 1) % total);
+  }, [index, total, onIndexChange]);
+
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+      if (e.key === "ArrowLeft") {
+        prev();
+      }
+      if (e.key === "ArrowRight") {
+        next();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [next, prev, onClose]);
+
+  return (
+    <div className="relative z-50 h-screen w-screen bg-black/80">
+      {/* Top bar */}
+      <div className="absolute top-4 right-7 z-10 flex items-center justify-between p-4">
+        <Button
+          className="p-5 text-white hover:bg-white/10 hover:text-white"
+          onClick={onClose}
+          size="icon"
+          variant="ghost"
+        >
+          <X className="size-8" />
+        </Button>
+      </div>
+
+      {/* Image */}
+      <Image
+        alt={`Car photo ${index + 1}`}
+        className="object-contain"
+        fill
+        sizes="100vw"
+        src={images[index] ?? ""}
+      />
+      <div className="absolute top-5 left-8 z-10 text-sm text-white/80">
+        {index + 1} / {total}
+      </div>
+      {/* Controls */}
+      <Button
+        className="absolute top-1/2 left-5 -translate-y-1/2 p-5 text-white hover:bg-white/10 hover:text-white"
+        onClick={prev}
+        size="icon"
+        variant="ghost"
+      >
+        <ChevronLeft className="size-10" />
+      </Button>
+
+      <Button
+        className="absolute top-1/2 right-7 -translate-y-1/2 p-5 text-white hover:bg-white/10 hover:text-white"
+        onClick={next}
+        size="icon"
+        variant="ghost"
+      >
+        <ChevronRight className="size-10" />
+      </Button>
+
+      {/* Thumbnails */}
+      <div className="absolute right-0 bottom-5 left-0 z-10 mx-auto w-fit rounded-lg border-white/10 border-t bg-black/40 p-3.5 px-4 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-2">
+          {images.map((src, i) => {
+            const active = i === index;
+            return (
+              <button
+                aria-current={active ? "true" : "false"}
+                className={[
+                  "relative h-14 w-20 flex-none overflow-auto rounded-lg border-2",
+                  active ? "border-white" : "border-white/50 opacity-90",
+                ].join(" ")}
+                key={src}
+                onClick={() => onIndexChange(i)}
+                type="button"
+              >
+                <Image
+                  alt={`Thumbnail ${i + 1}`}
+                  className="object-cover"
+                  fill
+                  sizes="80px"
+                  src={src}
+                />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DesktopGallery({ images, className }: GalleryProps) {
+  const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
+
+  const [open, setOpen] = React.useState(false);
+  const [activeIndex, setActiveIndex] = React.useState(0);
+
+  const handleOpen = (index: number) => {
+    setActiveIndex(index);
+    setOpen(true);
+  };
+
+  if (safeImages.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={cn("hidden md:block", className)}>
+      <GalleryGrid images={safeImages} onOpen={handleOpen} />
+
+      <Dialog onOpenChange={setOpen} open={open}>
+        {/* fullscreen dialog */}
+        <DialogContent className="left-0 w-screen max-w-none translate-x-0 border-0 bg-transparent p-0">
+          <FullscreenCarousel
+            images={safeImages}
+            index={activeIndex}
+            onClose={() => setOpen(false)}
+            onIndexChange={setActiveIndex}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+export interface MobileGalleryProps {
+  images: string[];
+  className?: string;
+}
+
+export function MobileGallery({ images, className }: MobileGalleryProps) {
+  if (!images?.length) {
+    return null;
+  }
+
+  return (
+    <div className={cn("block md:hidden", className)}>
+      <Carousel>
+        <CarouselContent>
+          {images.map((src, i) => (
+            <CarouselItem key={src}>
+              <div className="relative aspect-4/3 w-full overflow-hidden rounded-lg bg-muted">
+                <Image
+                  alt={`Car image ${i + 1}`}
+                  className="object-cover"
+                  fill
+                  priority={i === 0}
+                  sizes="50vw"
+                  src={src}
+                />
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+
+        {/* Arrows */}
+        <CarouselPrevious className="left-2 bg-black/40 text-white hover:bg-black/60" />
+        <CarouselNext className="right-2 bg-black/40 text-white hover:bg-black/60" />
+      </Carousel>
+    </div>
+  );
+}
+
+export function CarHeroImages({ images }: { images: string[] }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      {images.map((image) => (
+        <Image
+          alt="Car image"
+          height={100}
+          key={image}
+          src={image}
+          width={100}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function CarHero({ car }: CarHeroProps) {
+  return (
+    <section className="container mx-auto px-4 py-6 md:py-8">
+      <div className="space-y-4 lg:col-span-2">
+        <DesktopGallery images={car.images ?? []} />
+        <MobileGallery images={car.images ?? []} />
+
+        <div className="flex flex-wrap gap-2">
+          <Badge className="gap-1" variant="secondary">
+            <Check className="size-3" />
+            {CAR_PAGE_LABELS.noDeposit}
+          </Badge>
+          <Badge className="gap-1" variant="secondary">
+            <Check className="size-3" />
+            {CAR_PAGE_LABELS.freeDelivery}
+          </Badge>
+          <Badge className="gap-1" variant="secondary">
+            <Check className="size-3" />
+            {CAR_PAGE_LABELS.minDays}
+          </Badge>
         </div>
       </div>
     </section>
@@ -137,10 +384,10 @@ export function CarPricingTiers({ car, locale }: CarPricingTiersProps) {
         <CardTitle>{CAR_PAGE_LABELS.rentalDurationPricing}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-1">
           {tiers.map((tier) => (
             <div
-              className="flex flex-col gap-1 rounded-lg border p-4"
+              className="flex items-center justify-between gap-1 rounded-lg border p-4"
               key={tier.days}
             >
               <span className="text-muted-foreground text-sm">{tier.days}</span>
