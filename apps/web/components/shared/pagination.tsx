@@ -1,7 +1,7 @@
 import { buttonVariants } from "@rentway/ui/components/button";
+import { cn } from "@rentway/ui/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@rentway/ui/lib/utils";
 
 export interface PaginationProps {
   /** Current page (1-based) */
@@ -65,8 +65,7 @@ export function Pagination({
         aria-label="Previous page"
         className={cn(
           buttonVariants({ size: "icon", variant: "outline" }),
-          currentPage <= 1 &&
-            "pointer-events-none opacity-50"
+          currentPage <= 1 && "pointer-events-none opacity-50"
         )}
         href={prevHref}
       >

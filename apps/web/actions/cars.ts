@@ -1,7 +1,6 @@
 "use server";
 
 import { cars, db } from "@rentway/db";
-import { sql } from "drizzle-orm";
 import {
   and,
   desc,
@@ -9,6 +8,7 @@ import {
   type InferInsertModel,
   type InferSelectModel,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import { revalidateTag, unstable_cache } from "next/cache";
 
@@ -133,9 +133,7 @@ async function fetchCarsCount(filter: Omit<CarsFilter, "limit" | "offset">) {
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const query = db.select({ count: sql<number>`count(*)::int` }).from(cars);
-  const result = whereClause
-    ? await query.where(whereClause)
-    : await query;
+  const result = whereClause ? await query.where(whereClause) : await query;
   return result[0]?.count ?? 0;
 }
 

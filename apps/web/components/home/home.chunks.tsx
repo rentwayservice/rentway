@@ -5,12 +5,15 @@ import {
   CarouselItem,
 } from "@rentway/ui/components/carousel";
 import { Input } from "@rentway/ui/components/input";
-import { Car, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { getLocale } from "next-intl/server";
+import { getBrands } from "@/actions/brands";
+import { getCarsWithDetails } from "@/actions/cars";
 import { ProductCard } from "@/components/shared/product-card";
-import { DEMO_BRANDS, DEMO_CARS, HERO_CONFIG } from "./home.constants";
+import type { CarWithDetails } from "../car/car.types";
+import { HERO_CONFIG } from "./home.constants";
 
 export function HeroSection() {
   return (
@@ -76,8 +79,9 @@ export function HeroSection() {
   );
 }
 
-export function BrandsSection() {
-  const brands = DEMO_BRANDS.data;
+export async function BrandsSection() {
+  const brands = await getBrands();
+  console.log("brands", brands);
   return (
     <section className="container mx-auto">
       <h2 className="mb-6 font-semibold text-xl">Browse by brand</h2>
@@ -92,10 +96,16 @@ export function BrandsSection() {
                 className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-muted/50"
                 href={`/brands/${brand.slug}`}
               >
-                <Car className="size-5 shrink-0 text-muted-foreground" />
-                <span className="whitespace-nowrap font-medium text-sm">
+                <Image
+                  alt={brand.name}
+                  className="size-16 shrink-0 object-contain text-muted-foreground"
+                  height={80}
+                  src={brand.logoUrl ?? ""}
+                  width={80}
+                />
+                {/* <span className="whitespace-nowrap font-medium text-sm">
                   {brand.name}
-                </span>
+                </span> */}
               </Link>
             </CarouselItem>
           ))}
@@ -106,8 +116,13 @@ export function BrandsSection() {
 }
 
 export async function CarsSection() {
-  const cars = DEMO_CARS.data;
   const locale = await getLocale();
+  const carsWithDetails = await getCarsWithDetails({
+    limit: 12,
+    offset: 0,
+    approvalStatus: "approved",
+    status: "active",
+  });
   const sectionTitle = "SUV rental at San Francisco (SFO) airport";
 
   return (
@@ -125,8 +140,12 @@ export async function CarsSection() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {cars.map((car) => (
-          <ProductCard car={car} key={car.id} locale={locale} />
+        {carsWithDetails.map((car) => (
+          <ProductCard
+            car={car as CarWithDetails}
+            key={car.id}
+            locale={locale}
+          />
         ))}
       </div>
     </section>
