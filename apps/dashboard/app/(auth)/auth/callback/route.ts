@@ -1,0 +1,42 @@
+import { type NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/supabase/server";
+
+export async function GET(request: NextRequest) {
+  const host = request.headers.get("host") || "zaher.io";
+  const protocol = request.headers.get("x-forwarded-proto") || "https";
+  1;
+  const origin = `${protocol}://${host}`;
+
+  const { searchParams } = new URL(request.url);
+
+  const code = searchParams.get("code");
+
+  // if "next" is in param, use it as the redirect URL
+  const next = searchParams.get("next") ?? "/";
+
+  if (code) {
+    const supabase = await createSupabaseServerClient();
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+    }
+
+    const isLocalEnv = process.env.NODE_ENV === "development";
+
+    const forwardedHost = request.headers.get("x-forwarded-host");
+
+    if (isLocalEnv) {
+      return NextResponse.redirect(`${origin}${next}`);
+    }
+    if (forwardedHost) {
+      return NextResponse.redirect(`https://${forwardedHost}${next}`);
+    }
+
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
+  // return the user to an error page with instructions
+  return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+}

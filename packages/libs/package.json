@@ -6,7 +6,8 @@
   "types": "index.ts",
   "main": "index.ts",
   "exports": {
-    ".": "./index.ts"
+    "./utils/*": "./src/utils/*.ts",
+    "./constants/*": "./src/constants/*.ts"
   },
   "scripts": {},
   "keywords": [
@@ -21,6 +22,7 @@
     "@rentway/db": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^25.1.0",
     "@rentway/typescript-config": "workspace:*"
   }
 }
